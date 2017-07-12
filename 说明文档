@@ -1,0 +1,134 @@
+集群规划：
+主机名		IP			安装的软件					运行的进程
+master1 	192.168.1.111	jdk、hadoop			DataNode、NameNode、NodeManager、DFSZKFailoverController(zkfc)、ResourceManager、Hmaster、master、worker
+master2		192.168.1.100	jdk、hadoop			DataNode、NameNode、NodeManager、DFSZKFailoverController(zkfc)、ResourceManager、Hregionserver、worker
+node1		192.168.1.101	jdk、hadoop、zookeeper		DataNode、NodeManager、JournalNode、QuorumPeerMain、Hregionserver、worker
+node2		192.168.1.102	jdk、hadoop			DataNode、NodeManager
+node3		192.168.1.103	jdk、hadoop、zookeeper		DataNode、NodeManager、JournalNode、QuorumPeerMain
+node4		192.168.1.104	jdk、hadoop、zookeeper		DataNode、NodeManager、JournalNode、QuorumPeerMain、Hregionserver
+说明：
+1.在hadoop2.0中通常由两个NameNode组成，一个处于active状态，另一个处于standby状态。Active NameNode对外提供服务，而Standby NameNode则不对外提供服务，仅同步active namenode的状态，以便能够在它失败时快速进行切换。
+hadoop2.0官方提供了两种HDFS HA的解决方案，一种是NFS，另一种是QJM。这里我们使用简单的QJM。在该方案中，主备NameNode之间通过一组JournalNode同步元数据信息，一条数据只要成功写入多数JournalNode即认为写入成功。通常配置奇数个JournalNode
+这里还配置了一个zookeeper集群，用于ZKFC（DFSZKFailoverController）故障转移，当Active NameNode挂掉了，会自动切换Standby NameNode为standby状态
+2.hadoop-2.2.0中依然存在一个问题，就是ResourceManager只有一个，存在单点故障，hadoop-2.4.1解决了这个问题，有两个ResourceManager，一个是Active，一个是Standby，状态由zookeeper进行协调
+3.转换为hadoop节点，在shell中执行./to_singal.sh （注意hdfs.tmp.dir为tmp1）
+----------------------------------------------------------------------
+文件部署：
+jdk存放位置：/usr/java/jdk1.8.0_111
+scala存放位置：/usr/scala
+hadoop組件位置：hadoop-2.6/(hadoop-2.6.0、hbase、hive、sqoop、zookeeper、spark)
+----------------------------------------------------------------------
+安裝步驟（已做成shell脚本，在ssh无密码登录没问题情况下，可直接在master1上运行shell文件夹内脚本完成安装）
+1.安装配置zooekeeper集群（在node1上,分发至node2、node4;修改zoo.cfg与myid内容//包内文件已改zoo.cfg)
+2.安装配置hadoop集群（在master1操作）
+1、按文件部署放置文件至各节点指定位置
+#完成整个集群所有组件有部署//注意各zk节点修改相应$ZOOKEEPER_HOME/data/myid
+./scp.sh yanbin ~/hadoop-2.6 master2 node1 node2 node3 node4 ~/
+2、完成集群的环境变量配置
+su
+scp /etc/profile root@hosts:/etc/profile
+3、首次启动严格按照规定步骤进行
+<!--
+a、启动zookeeper集群（分别在node1、node3、node4上启动zk）
+#./ssh.sh yanbin zkServer_start node1 node3 node4(master1.shell内执行)
+zkServer.sh start
+zkServer.sh status
+b、启动journalnode(分别在node1、node3、node4上启动执行）
+hadoop-daemon.sh start journalnode
+c、格式化HDFS
+#在node1上执行命令
+hdfs namenode -format
+#格式化后会在根据core-site.xml中的hadoop.tmp.dir配置生成个文件，这里我配置的是~/hadoop-2.6/tmp，然后将~/hadoop-2.6/tmp拷贝到master2的~/hadoop-2.6/下!!!!
+scp -r ~/hadoop-2.6/tmp yanbin@master2~/hadoop-2.6/
+d、格式化ZK(在master1上执行即可)
+hdfs zkfc -formatZK
+e、启动HDFS(在master1上执行即可)
+start-dfs.sh
+f、启动YARN
+start-yarn.sh
+-->
+到此，hadoop-2.6.0配置完毕，可以统计浏览器访问:
+		http://192.168.1.111:50070
+		NameNode 'master1:9002' (active)
+		http://192.168.1.100:50070
+		NameNode 'master2:9002' (standby)
+4、下次启动顺序（Zk => HDFS => YARN => HBASE => Spark//关闭顺序相反）
+zkServer.sh start(在node1,node3,node4分别执行)
+start-dfs.sh（在master1执行）
+start-yarn.sh（在master1执行）
+start-hbase.sh（在master1执行）
+$SPARK_HOME/sbin/start-all.sh（在master1执行）
+----------------------------------------------------------------------------------
+注意事项：
+1、mysql远程服务开启！！!#与sqoop能否正常导入导出相关
+<!--
+#mysql中
+grant all privileges *.* to 'root'@'%' identified by '0000';#所有host均可通过root及密码0000访问数据库
+flush privileges;
+vi my.conf
+#bind_Address:127.0.0.1
+-->
+2、host冲突导致zookeepe故障(一个ip对应一个hostname)
+127.0.0.1 	localhost hostname
+127.0.1.1	hostname
+192.168.1.100   hostname
+3、zookeeper节点过多，启动数目不够导致启动失败！
+3、authorized_keys已拷贝，ssh无密码登录失败！
+<!--
+a、/etc/ssh/sshd_config修改配置
+b、修改authorized_keys权限
+c、authorized_keys两台机器时都要导入
+-->
+4、各组件配置文件见包内
+hadoop => core-stie.xml hdfs-site.xml yarn-site.xml mapred-site.xml yarn-env.sh hadoop-env.sh
+zookeeper => 
+---------------------------------------------------------------------------------
+
+/etc/profile內容:
+#set hadoop environment
+export HADOOP_HOME=/home/yanbin/hadoop-2.6/hadoop-2.6.0
+export PATH=$HADOOP_HOME/sbin:/$HADOOP_HOME/bin:$PATH
+export HADOOP_MAPRED_HOME=$HADOOP_HOME 
+export HADOOP_COMMON_HOME=$HADOOP_HOME 
+export HADOOP_HDFS_HOME=$HADOOP_HOME 
+export YARN_HOME=$HADOOP_HOME 
+export HADOOP_CONF_DIR=$HADOOP_HOME/etc/hadoop 
+export HDFS_CONF_DIR=$HADOOP_HOME/etc/hadoop 
+export YARN_CONF_DIR=$HADOOP_HOME/etc/hadoop 
+#set java environment
+export JAVA_HOME=/usr/java/jdk1.8.0_111
+export JRE_HOME=${JAVA_HOME}/jre
+export CLASSPATH=.:${JAVA_HOME}/lib:${JRE_HOME}/lib
+export PATH=${JAVA_HOME}/bin:$PATH
+#set zookeeper environment
+export ZOOKEEPER_HOME=/home/yanbin/hadoop-2.6/zookeeper
+export PATH=$ZOOKEEPER_HOME/bin:$PATH
+#set hbase environment
+export HBASE_HOME=/home/yanbin/hadoop-2.6/hbase
+export PATH=$HBASE_HOME/bin:$PATH
+#set hive environment
+export HIVE_HOME=/home/yanbin/hadoop-2.6/hive
+export PATH=$HIVE_HOME/bin:$PATH
+#set sqoop environment
+export SQOOP_HOME=/home/yanbin/hadoop-2.6/sqoop
+export PATH=$SQOOP_HOME/bin:$PATH
+#set  environment for spark
+export SPARK_HOME=/home/yanbin/hadoop-2.6/spark
+export PATH=$PATH:$SPARK_HOME/bin:$SPARK_HOME/sbin
+#set scala environment
+export SCALA_HOME=/usr/scala
+export PATH=$PATH:$SCALA_HOME/bin
+#set mahout environment
+export MAHOUT_HOME=/home/yanbin/mahout/apache-mahout-distribution-0.12.2
+export PATH=$PATH:$MAHOUT_HOME/bin
+---------------------------------------------------------------
+/etc/hosts內容：
+192.168.1.111   master1
+192.168.1.100   master2
+192.168.1.101   node1
+192.168.1.102   node2
+192.168.1.103   node3
+192.168.1.104   node4
+
+
+
