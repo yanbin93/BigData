@@ -39,7 +39,7 @@
 export JAVA_HOME=/usr/java/jdk1.8.0_111
 export HADOOP_CONF_DIR=/home/yanbin/hadoop-2.6/hadoop-2.6.0/etc/hadoop
 export SPARK_MASTER_IP=master1
-export SPARK_WORKER_MEMORY=1g
+export SPARK_WORKER_MEMORY=2g
 export SCALA_HOME=/usr/scala
 export SPARK_HOME=/home/yanbin/hadoop-2.6/spark
 export HIVE_HOME=/home/yanbin/hadoop-2.6/hive
@@ -47,7 +47,7 @@ export HIVE_HOME=/home/yanbin/hadoop-2.6/hive
 # - SPARK_EXECUTOR_CORES, Number of cores for the executors (Default: 1).
 # - SPARK_EXECUTOR_MEMORY, Memory per Executor (e.g. 1000M, 2G) (Default: 1G)
 # - SPARK_DRIVER_MEMORY, Memory for Driver (e.g. 1000M, 2G) (Default: 1G)
-
+export SPARK_MASTER_HOST=localhost
 # Options for the daemons used in the standalone deploy mode
 # - SPARK_MASTER_HOST, to bind the master to a different IP address or hostname
 # - SPARK_MASTER_PORT / SPARK_MASTER_WEBUI_PORT, to use non-default ports for the master

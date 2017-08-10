@@ -1,0 +1,81 @@
+# /etc/profile: system-wide .profile file for the Bourne shell (sh(1))
+# and Bourne compatible shells (bash(1), ksh(1), ash(1), ...).
+
+if [ "$PS1" ]; then
+  if [ "$BASH" ] && [ "$BASH" != "/bin/sh" ]; then
+    # The file bash.bashrc already sets the default PS1.
+    # PS1='\h:\w\$ '
+    if [ -f /etc/bash.bashrc ]; then
+      . /etc/bash.bashrc
+    fi
+  else
+    if [ "`id -u`" -eq 0 ]; then
+      PS1='# '
+    else
+      PS1='$ '
+    fi
+  fi
+fi
+
+if [ -d /etc/profile.d ]; then
+  for i in /etc/profile.d/*.sh; do
+    if [ -r $i ]; then
+      . $i
+    fi
+  done
+  unset i
+fi
+#set hadoop environment
+export HADOOP_HOME=/home/yanbin/hadoop-2.6/hadoop-2.6.0
+export PATH=$HADOOP_HOME/sbin:/$HADOOP_HOME/bin:$PATH
+export HADOOP_MAPRED_HOME=$HADOOP_HOME 
+export HADOOP_COMMON_HOME=$HADOOP_HOME 
+export HADOOP_HDFS_HOME=$HADOOP_HOME 
+export YARN_HOME=$HADOOP_HOME 
+export HADOOP_CONF_DIR=$HADOOP_HOME/etc/hadoop 
+export HDFS_CONF_DIR=$HADOOP_HOME/etc/hadoop 
+export YARN_CONF_DIR=$HADOOP_HOME/etc/hadoop 
+#set java environment
+export JAVA_HOME=/usr/java/jdk1.8.0_111
+export JRE_HOME=${JAVA_HOME}/jre
+export CLASSPATH=.:${JAVA_HOME}/lib:${JRE_HOME}/lib
+export PATH=${JAVA_HOME}/bin:$PATH
+#set zookeeper environment
+export ZOOKEEPER_HOME=/home/yanbin/hadoop-2.6/zookeeper
+export PATH=$ZOOKEEPER_HOME/bin:$PATH
+#set hbase environment
+export HBASE_HOME=/home/yanbin/hadoop-2.6/hbase
+export PATH=$HBASE_HOME/bin:$PATH
+#set hive environment
+export HIVE_HOME=/home/yanbin/hadoop-2.6/hive
+export PATH=$HIVE_HOME/bin:$PATH
+#set sqoop environment
+export SQOOP_HOME=/home/yanbin/hadoop-2.6/sqoop
+export PATH=$SQOOP_HOME/bin:$PATH
+#set up environment for spark
+export SPARK_HOME=/home/yanbin/hadoop-2.6/spark
+export SPARK_VERSION=2.1.0
+export PYTHONPATH=$SPARK_HOME/python:$SPARK_HOME/python/lib/py4j-0.10.4.src.zip:$SPARK_HOME/python/build
+export PATH=$PATH:$SPARK_HOME/bin:$SPARK_HOME/sbin
+#set scala environment
+export SCALA_HOME=/usr/scala
+export SCALA_VERSION=2.11
+export PATH=$PATH:$SCALA_HOME/bin
+#set mahout environment
+export MAHOUT_HOME=/home/yanbin/mahout/apache-mahout-distribution-0.12.2
+export PATH=$PATH:$MAHOUT_HOME/bin
+#set sbt environment
+export SBT_HOME=/usr/sbt
+export PATH=$SBT_HOME/bin:$PATH
+#set jquery environment
+export JQUERY_HOME=/home/yanbin/jquer
+#set ant  environment
+export ANT_HOME=/usr/share/ant
+export PATH=$ANT_HOME/bin:$PATH
+export SPARKDL_HOME=/home/yanbin/hadoop-2.6/spark-deep-learning
+export PYTHONPATH=$SPARKDL_HOME/target/scala-2.11/spark-deep-learning-assembly-0.1.0-spark2.1.jar:$SPARK_HOME/python/:$PYTHONPATH
+export PYTHONPATH=/home/yanbin/hadoop-2.6/spark/python/lib/py4j-0.10.4-src.zip:$PYTHONPATH
+export PYTHONPATH=$SPARKDL_HOME/python:$PYTHONPATH
+PYSPARK_PYTHON=python
+PYSPARK_DRIVER_PYTHON=ipython
+PYSPARK_DRIVER_PYTHON_OPTS="notebook"$SPARK_HOME/bin/pyspark
